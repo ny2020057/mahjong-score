@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🀄 麻雀スコア管理</title>
   <script src="https://cdn.tailwindcss.com"></script>
+<!-- Supabase Client (データ同期用) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    // ⚠️ あなたのSupabase情報をここに設定してください
-    const SUPABASE_URL = 'https://oidnfkbxmkvqrdtqwcgc.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pZG5ma2J4bWt2cXJkdHF3Y2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjgzODgsImV4cCI6MjA5ODE0NDM4OH0.RYGMUUVh5gT9k2G5Vbmb0mo6yasp9GjO4-wjvTa7xYA';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const myUrl = 'https://oidnfkbxmkvqrdtqwcgc.supabase.co';
+    const myKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pZG5ma2J4bWt2cXJkdHF3Y2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjgzODgsImV4cCI6MjA5ODE0NDM4OH0.RYGMUUVh5gT9k2G5Vbmb0mo6yasp9GjO4-wjvTa7xYA';
+    
+    // グローバルな supabase インスタンスを正しく初期化
+    window.supabase = supabase.createClient(myUrl, myKey);
   </script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
