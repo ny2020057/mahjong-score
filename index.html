@@ -9,7 +9,9 @@
   <script>
     const myUrl = 'https://oidnfkbxmkvqrdtqwcgc.supabase.co';
     const myKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pZG5ma2J4bWt2cXJkdHF3Y2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjgzODgsImV4cCI6MjA5ODE0NDM4OH0.RYGMUUVh5gT9k2G5Vbmb0mo6yasp9GjO4-wjvTa7xYA';
-    window.mahjongSupabase = supabase.createClient(myUrl, myKey);
+    
+    // 競合を完全に防ぎつつ、認証ヘッダーを正しく付与する公式の初期化方法
+    window.db = supabase.createClient(myUrl, myKey);
   </script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
@@ -124,7 +126,7 @@
       await reloadData();
       
       // リアルタイム同期設定
-      window.mahjongSupabase.channel('public-changes')
+      window.db.channel('public-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, reloadData)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state' }, reloadData)
         .subscribe();
@@ -132,18 +134,22 @@
 
     async function reloadData() {
       showSync(true);
-      const { data: stateData } = await window.mahjongSupabase.from("app_state").select("*").eq("key", "players").maybeSingle();
-      if (stateData) players = stateData.value;
+      try {
+        const { data: stateData } = await window.db.from("app_state").select("*").eq("key", "players").maybeSingle();
+        if (stateData) players = stateData.value;
 
-      const { data: gamesData } = await window.mahjongSupabase.from("games").select("*").order("game_date", { ascending: false }).order("game_no", { ascending: false });
-      if (gamesData) {
-        games = gamesData.map(g => ({
-          id: g.id,
-          timestamp: g.created_at,
-          gameDate: g.game_date,
-          gameNo: g.game_no,
-          results: g.results
-        }));
+        const { data: gamesData } = await window.db.from("games").select("*").order("game_date", { ascending: false }).order("game_no", { ascending: false });
+        if (gamesData) {
+          games = gamesData.map(g => ({
+            id: g.id,
+            timestamp: g.created_at,
+            gameDate: g.game_date,
+            gameNo: g.game_no,
+            results: g.results
+          }));
+        }
+      } catch (e) {
+        console.error("データ取得エラー:", e);
       }
 
       renderAll();
@@ -224,7 +230,7 @@
       showSync(true);
       const newNames = [0, 1, 2, 3].map(i => document.getElementById(`edit-player-${i}`).value.trim() || players[i]);
       players = newNames;
-      await window.mahjongSupabase.from("app_state").upsert({ key: "players", value: newNames });
+      await window.db.from("app_state").upsert({ key: "players", value: newNames });
       isEditingPlayers = false;
       toggleEditPlayers(false);
       await reloadData();
@@ -289,7 +295,7 @@
       const noVal = parseInt(document.getElementById('input-game-no').value, 10);
       
       showSync(true);
-      await window.mahjongSupabase.from("games").insert([{ game_date: dateVal, game_no: noVal, results: currentPreviewResults }]);
+      await window.db.from("games").insert([{ game_date: dateVal, game_no: noVal, results: currentPreviewResults }]);
       
       [0, 1, 2, 3].forEach(i => document.getElementById(`score-input-${i}`).value = '');
       document.getElementById('preview-section').classList.add('hidden');
@@ -395,7 +401,7 @@
     async function deleteGame(id) {
       if(!confirm("削除しますか？")) return;
       showSync(true);
-      await window.mahjongSupabase.from("games").delete().eq("id", id);
+      await window.db.from("games").delete().eq("id", id);
       historyViewGameId = null;
       await reloadData();
     }
