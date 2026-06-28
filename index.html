@@ -5,14 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🀄 麻雀スコア管理</title>
   <script src="https://cdn.tailwindcss.com"></script>
-<!-- Supabase Client (データ同期用) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
     const myUrl = 'https://oidnfkbxmkvqrdtqwcgc.supabase.co';
     const myKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pZG5ma2J4bWt2cXJkdHF3Y2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjgzODgsImV4cCI6MjA5ODE0NDM4OH0.RYGMUUVh5gT9k2G5Vbmb0mo6yasp9GjO4-wjvTa7xYA';
-    
-    // グローバルな supabase インスタンスを正しく初期化
-    window.supabase = supabase.createClient(myUrl, myKey);
+    // 衝突を防ぐため、ここでwindow直下に作成します
+    window.mahjongSupabase = supabase.createClient(myUrl, myKey);
   </script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
@@ -102,12 +100,11 @@
 
     // 初期化
     window.onload = async function() {
-      // 本日の日付をセット
       document.getElementById('input-game-date').value = new Date().toLocaleDateString("sv-SE");
       await reloadData();
       
-      // リアルタイム同期をセット
-      supabase.channel('public-changes')
+      // リアルタイム同期設定
+      window.mahjongSupabase.channel('public-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, reloadData)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state' }, reloadData)
         .subscribe();
@@ -116,11 +113,11 @@
     async function reloadData() {
       showSync(true);
       // プレイヤー名取得
-      const { data: stateData } = await supabase.from("app_state").select("*").eq("key", "players").maybeSingle();
+      const { data: stateData } = await window.mahjongSupabase.from("app_state").select("*").eq("key", "players").maybeSingle();
       if (stateData) players = stateData.value;
 
       // 履歴取得
-      const { data: gamesData } = await supabase.from("games").select("*").order("game_date", { ascending: false }).order("game_no", { ascending: false });
+      const { data: gamesData } = await window.mahjongSupabase.from("games").select("*").order("game_date", { ascending: false }).order("game_no", { ascending: false });
       if (gamesData) {
         games = gamesData.map(g => ({
           id: g.id,
@@ -139,14 +136,12 @@
       document.getElementById('syncing-indicator').style.display = show ? 'block' : 'none';
     }
 
-    // タブ切り替え
     function switchTab(tabIdx) {
       currentTab = tabIdx;
       [0, 1, 2].forEach(i => {
         document.getElementById(`tab-${i}`).className = `flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${i === tabIdx ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-slate-200"}`;
         document.getElementById(`content-tab-${i}`).style.display = i === tabIdx ? 'block' : 'none';
       });
-      // 履歴の子画面状態をリセット
       if(tabIdx === 1) { historyViewDate = null; historyViewGameId = null; }
       renderAll();
     }
@@ -157,10 +152,8 @@
       renderStatsTab();
     }
 
-    // --- 入力タブの描画・ロジック ---
     let isEditingPlayers = false;
     function renderInputTab() {
-      // プレイヤー名
       const grid = document.getElementById('player-names-grid');
       grid.innerHTML = '';
       players.forEach((name, i) => {
@@ -179,7 +172,6 @@
         }
       });
 
-      // 点数入力欄の生成（一度だけ生成するため、中身が空の時か名前が変わった時のみ更新）
       const scoreArea = document.getElementById('score-inputs-area');
       if (scoreArea.children.length !== 4 || scoreArea.getAttribute('data-players') !== players.join(',')) {
         scoreArea.setAttribute('data-players', players.join(','));
@@ -190,7 +182,7 @@
               <label class="w-16 text-sm text-slate-400 truncate">${name}</label>
               <input type="number" id="score-input-${i}" placeholder="例: 25000" oninput="calcPreview()" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500">
             </div>`;
-        } );
+        });
       }
       autoCalcGameNo();
     }
@@ -214,7 +206,7 @@
       showSync(true);
       const newNames = [0, 1, 2, 3].map(i => document.getElementById(`edit-player-${i}`).value.trim() || DEFAULT_NAMES[i]);
       players = newNames;
-      await supabase.from("app_state").upsert({ key: "players", value: newNames });
+      await window.mahjongSupabase.from("app_state").upsert({ key: "players", value: newNames });
       isEditingPlayers = false;
       toggleEditPlayers(false);
       await reloadData();
@@ -251,7 +243,6 @@
 
       errBox.classList.add('hidden');
       
-      // 計算ロジック
       const entries = players.map((name, i) => ({ name, score: scores[i] }));
       const sorted = [...entries].map((e, i) => ({ ...e, idx: i })).sort((a, b) => b.score - a.score || a.idx - b.idx);
       
@@ -262,7 +253,6 @@
         return { name: e.name, score: e.score, rank, pts };
       });
 
-      // プレビュー描画
       const dateVal = document.getElementById('input-game-date').value;
       const noVal = document.getElementById('input-game-no').value;
       document.getElementById('preview-meta').textContent = `${formatDate(dateVal)} 第${noVal}試合`;
@@ -288,9 +278,8 @@
       const noVal = parseInt(document.getElementById('input-game-no').value, 10);
       
       showSync(true);
-      await supabase.from("games").insert([{ game_date: dateVal, game_no: noVal, results: currentPreviewResults }]);
+      await window.mahjongSupabase.from("games").insert([{ game_date: dateVal, game_no: noVal, results: currentPreviewResults }]);
       
-      // クリア
       [0, 1, 2, 3].forEach(i => document.getElementById(`score-input-${i}`).value = '');
       document.getElementById('preview-section').classList.add('hidden');
       currentPreviewResults = null;
@@ -302,7 +291,6 @@
       await reloadData();
     }
 
-    // --- 履歴タブの描画・ロジック ---
     let historyViewDate = null;
     let historyViewGameId = null;
 
@@ -316,9 +304,7 @@
         return;
       }
 
-      // ドリルダウン表示制御
       if (historyViewGameId) {
-        // 単一試合詳細
         const g = games.find(x => x.id === historyViewGameId);
         if(!g) { historyViewGameId = null; renderHistoryTab(); return; }
         
@@ -349,7 +335,6 @@
       }
 
       if (historyViewDate) {
-        // 特定日の試合一覧
         nav.innerHTML = `<button onclick="historyViewDate=null; renderHistoryTab();" class="text-emerald-400 hover:text-emerald-300">対局日一覧</button> <span class="text-slate-600">›</span> <span class="text-slate-300">${formatDate(historyViewDate)}</span>`;
         nav.classList.remove('hidden');
 
@@ -373,7 +358,6 @@
         return;
       }
 
-      // 日付一覧画面
       nav.classList.add('hidden');
       const byDate = {};
       games.forEach(g => {
@@ -400,12 +384,11 @@
     async function deleteGame(id) {
       if(!confirm("削除しますか？")) return;
       showSync(true);
-      await supabase.from("games").delete().eq("id", id);
+      await window.mahjongSupabase.from("games").delete().eq("id", id);
       historyViewGameId = null;
       await reloadData();
     }
 
-    // --- 統計タブの描画・ロジック ---
     function renderStatsTab() {
       const area = document.getElementById('stats-area');
       if (games.length === 0) {
@@ -413,7 +396,6 @@
         return;
       }
 
-      // 集計
       const stats = players.map(name => {
         const participated = games.filter(g => g.results.some(r => r.name === name));
         const count = participated.length;
@@ -462,6 +444,9 @@
 
       area.innerHTML = rankingHtml + detailsHtml;
     }
+
+    function formatDate(d) { const [y, m, dd] = d.split("-"); return `${y}年${parseInt(m)}月${parseInt(dd)}日`; }
+    function todayStr() { return new Date().toLocaleDateString("sv-SE"); }
   </script>
 </body>
 </html>
