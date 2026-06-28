@@ -102,8 +102,11 @@
     const INITIAL_POINTS = 25000;
     const OKA = ((RETURN_POINTS - INITIAL_POINTS) * 4) / 1000;
 
-    // 計算用ロジック関数
+    // 便利関数
     function calcPoints(s) { return Math.round((s - RETURN_POINTS) / 1000); }
+    function toDateStr(iso) { return iso.slice(0, 10); }
+    function formatDate(d) { const [y, m, dd] = d.split("-"); return `${y}年${parseInt(m)}月${parseInt(dd)}日`; }
+    function todayStr() { return new Date().toLocaleDateString("sv-SE"); }
     
     function calcGameResult(entries) {
       const sorted = [...entries].map((e, i) => ({ ...e, idx: i })).sort((a, b) => b.score - a.score || a.idx - b.idx);
@@ -117,7 +120,7 @@
 
     // 初期化
     window.onload = async function() {
-      document.getElementById('input-game-date').value = new Date().toLocaleDateString("sv-SE");
+      document.getElementById('input-game-date').value = todayStr();
       await reloadData();
       
       // リアルタイム同期設定
@@ -442,9 +445,9 @@
           <div class="bg-slate-900 rounded-xl border border-slate-800 p-4">
             <p class="text-sm font-semibold text-white mb-2 pb-1 border-b border-slate-800">${s.name}</p>
             <div class="space-y-1">
-              <div class="flex justify-between text-xs"><span class="text-slate-500">対局数</span><span class="text-slate-200">{s.count}局</span></div>
-              <div class="flex justify-between text-xs"><span class="text-slate-500">平均順位</span><span class="text-slate-200">{s.avgRank}位</span></div>
-              <div class="flex justify-between text-xs"><span class="text-slate-500">1位率</span><span class="text-slate-200">{s.top1Rate}%</span></div>
+              <div class="flex justify-between text-xs"><span class="text-slate-500">対局数</span><span class="text-slate-200">${s.count}局</span></div>
+              <div class="flex justify-between text-xs"><span class="text-slate-500">平均順位</span><span class="text-slate-200">${s.avgRank}位</span></div>
+              <div class="flex justify-between text-xs"><span class="text-slate-500">1位率</span><span class="text-slate-200">${s.top1Rate}%</span></div>
             </div>
           </div>`;
       });
@@ -452,8 +455,6 @@
 
       area.innerHTML = rankingHtml + detailsHtml;
     }
-
-    function formatDate(d) { const [y, m, dd] = d.split("-"); return `${y}年${parseInt(m)}月${parseInt(dd)}日`; }
   </script>
 </body>
 </html>
