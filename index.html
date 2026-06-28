@@ -9,8 +9,6 @@
   <script>
     const myUrl = 'https://oidnfkbxmkvqrdtqwcgc.supabase.co';
     const myKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pZG5ma2J4bWt2cXJkdHF3Y2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjgzODgsImV4cCI6MjA5ODE0NDM4OH0.RYGMUUVh5gT9k2G5Vbmb0mo6yasp9GjO4-wjvTa7xYA';
-    
-    // 競合を完全に防ぎつつ、認証ヘッダーを正しく付与する公式の初期化方法
     window.db = supabase.createClient(myUrl, myKey);
   </script>
 </head>
