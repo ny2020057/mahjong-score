@@ -9,7 +9,6 @@
   <script>
     const myUrl = 'https://oidnfkbxmkvqrdtqwcgc.supabase.co';
     const myKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pZG5ma2J4bWt2cXJkdHF3Y2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjgzODgsImV4cCI6MjA5ODE0NDM4OH0.RYGMUUVh5gT9k2G5Vbmb0mo6yasp9GjO4-wjvTa7xYA';
-    // 衝突を防ぐため、ここでwindow直下に作成します
     window.mahjongSupabase = supabase.createClient(myUrl, myKey);
   </script>
 </head>
@@ -98,6 +97,24 @@
     let players = ["東家", "南家", "西家", "北家"];
     let games = [];
 
+    // 計算用定数
+    const RETURN_POINTS = 30000;
+    const INITIAL_POINTS = 25000;
+    const OKA = ((RETURN_POINTS - INITIAL_POINTS) * 4) / 1000;
+
+    // 計算用ロジック関数
+    function calcPoints(s) { return Math.round((s - RETURN_POINTS) / 1000); }
+    
+    function calcGameResult(entries) {
+      const sorted = [...entries].map((e, i) => ({ ...e, idx: i })).sort((a, b) => b.score - a.score || a.idx - b.idx);
+      return entries.map((e, i) => {
+        const rank = sorted.findIndex(s => s.idx === i) + 1;
+        let pts = calcPoints(e.score);
+        if (rank === 1) pts += OKA;
+        return { name: e.name, score: e.score, rank, pts };
+      });
+    }
+
     // 初期化
     window.onload = async function() {
       document.getElementById('input-game-date').value = new Date().toLocaleDateString("sv-SE");
@@ -112,11 +129,9 @@
 
     async function reloadData() {
       showSync(true);
-      // プレイヤー名取得
       const { data: stateData } = await window.mahjongSupabase.from("app_state").select("*").eq("key", "players").maybeSingle();
       if (stateData) players = stateData.value;
 
-      // 履歴取得
       const { data: gamesData } = await window.mahjongSupabase.from("games").select("*").order("game_date", { ascending: false }).order("game_no", { ascending: false });
       if (gamesData) {
         games = gamesData.map(g => ({
@@ -204,7 +219,7 @@
 
     async function savePlayerNames() {
       showSync(true);
-      const newNames = [0, 1, 2, 3].map(i => document.getElementById(`edit-player-${i}`).value.trim() || DEFAULT_NAMES[i]);
+      const newNames = [0, 1, 2, 3].map(i => document.getElementById(`edit-player-${i}`).value.trim() || players[i]);
       players = newNames;
       await window.mahjongSupabase.from("app_state").upsert({ key: "players", value: newNames });
       isEditingPlayers = false;
@@ -244,14 +259,7 @@
       errBox.classList.add('hidden');
       
       const entries = players.map((name, i) => ({ name, score: scores[i] }));
-      const sorted = [...entries].map((e, i) => ({ ...e, idx: i })).sort((a, b) => b.score - a.score || a.idx - b.idx);
-      
-      currentPreviewResults = entries.map((e, i) => {
-        const rank = sorted.findIndex(s => s.idx === i) + 1;
-        let pts = Math.round((e.score - RETURN_POINTS) / 1000);
-        if (rank === 1) pts += OKA;
-        return { name: e.name, score: e.score, rank, pts };
-      });
+      currentPreviewResults = calcGameResult(entries);
 
       const dateVal = document.getElementById('input-game-date').value;
       const noVal = document.getElementById('input-game-no').value;
@@ -434,9 +442,9 @@
           <div class="bg-slate-900 rounded-xl border border-slate-800 p-4">
             <p class="text-sm font-semibold text-white mb-2 pb-1 border-b border-slate-800">${s.name}</p>
             <div class="space-y-1">
-              <div class="flex justify-between text-xs"><span class="text-slate-500">対局数</span><span class="text-slate-200">${s.count}局</span></div>
-              <div class="flex justify-between text-xs"><span class="text-slate-500">平均順位</span><span class="text-slate-200">${s.avgRank}位</span></div>
-              <div class="flex justify-between text-xs"><span class="text-slate-500">1位率</span><span class="text-slate-200">${s.top1Rate}%</span></div>
+              <div class="flex justify-between text-xs"><span class="text-slate-500">対局数</span><span class="text-slate-200">{s.count}局</span></div>
+              <div class="flex justify-between text-xs"><span class="text-slate-500">平均順位</span><span class="text-slate-200">{s.avgRank}位</span></div>
+              <div class="flex justify-between text-xs"><span class="text-slate-500">1位率</span><span class="text-slate-200">{s.top1Rate}%</span></div>
             </div>
           </div>`;
       });
@@ -446,7 +454,6 @@
     }
 
     function formatDate(d) { const [y, m, dd] = d.split("-"); return `${y}年${parseInt(m)}月${parseInt(dd)}日`; }
-    function todayStr() { return new Date().toLocaleDateString("sv-SE"); }
   </script>
 </body>
 </html>
