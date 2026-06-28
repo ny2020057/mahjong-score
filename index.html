@@ -4,17 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🀄 麻雀スコア管理</title>
+  <!-- Tailwind CSS v3 -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM (安定版) -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
-  <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+  <!-- Supabase Client -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    // ⚠️ あなたのSupabase情報をここに設定してください
-    const SUPABASE_URL = 'https://oidnfkbxmkvqrdtqwcgc.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pZG5ma2J4bWt2cXJkdHF3Y2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjgzODgsImV4cCI6MjA5ODE0NDM4OH0.RYGMUUVh5gT9k2G5Vbmb0mo6yasp9GjO4-wjvTa7xYA';
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   </script>
 </head>
@@ -23,13 +24,11 @@
 
   <script type="text/babel">
     const { useState, useEffect, useCallback } = React;
-    const { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } = Recharts;
 
     const RETURN_POINTS = 30000;
     const INITIAL_POINTS = 25000;
     const OKA = ((RETURN_POINTS - INITIAL_POINTS) * 4) / 1000;
     const DEFAULT_NAMES = ["東家", "南家", "西家", "北家"];
-    const COLORS = ["#34d399", "#60a5fa", "#f472b6", "#fbbf24"];
     const TABS = ["入力", "履歴", "統計"];
 
     function calcPoints(s) { return Math.round((s - RETURN_POINTS) / 1000); }
@@ -95,13 +94,6 @@
         setSyncing(false);
       };
 
-      const updateGame = async (updated) => {
-        setSyncing(true);
-        await supabase.from("games").update({ game_date: updated.gameDate, game_no: updated.gameNo, results: updated.results }).eq("id", updated.id);
-        await reload();
-        setSyncing(false);
-      };
-
       const updatePlayers = async (names) => {
         setSyncing(true);
         setPlayers(names);
@@ -116,16 +108,16 @@
       );
 
       return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-          <header className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur border-b border-slate-800">
-            <div className="max-w-xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-xl mx-auto px-4 min-h-screen bg-slate-950">
+          <header className="sticky top-0 z-30 bg-slate-950/90 backdrop-blur border-b border-slate-800 pb-2">
+            <div className="py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🀄</span>
                 <h1 className="text-base font-bold tracking-wide text-white">麻雀スコア</h1>
               </div>
               {syncing && <span className="text-xs text-amber-400 animate-pulse">同期中…</span>}
             </div>
-            <div className="max-w-xl mx-auto px-4 flex gap-1 pb-2">
+            <div className="flex gap-1">
               {TABS.map((t, i) => (
                 <button key={t} onClick={() => setTab(i)}
                   className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === i ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-slate-200"}`}>
@@ -134,9 +126,9 @@
               ))}
             </div>
           </header>
-          <main className="max-w-xl mx-auto px-4 py-6 pb-20">
+          <main className="py-6 pb-20">
             {tab === 0 && <InputTab players={players} onUpdatePlayers={updatePlayers} onAddGame={addGame} games={games} />}
-            {tab === 1 && <HistoryTab games={games} onDeleteGame={deleteGame} onUpdateGame={updateGame} />}
+            {tab === 1 && <HistoryTab games={games} onDeleteGame={deleteGame} />}
             {tab === 2 && <StatsTab games={games} players={players} />}
           </main>
         </div>
@@ -197,7 +189,7 @@
                   <span className="w-5 h-5 rounded bg-slate-700 text-xs flex items-center justify-center text-slate-400">{i + 1}</span>
                   {editNames
                     ? <input value={nameEdits[i]} onChange={e => { const n = [...nameEdits]; n[i] = e.target.value; setNameEdits(n); }}
-                        className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-500" />
+                        className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-0.5 text-sm text-white focus:outline-none focus:border-emerald-500" />
                     : <span className="text-sm text-white">{name}</span>
                   }
                 </div>
@@ -217,7 +209,6 @@
                 <label className="text-xs text-slate-500 mb-1 block">試合番号</label>
                 <input type="number" min="1" value={gameNo} onChange={e => setGameNo(e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 text-center" />
-                <p className="text-xs text-slate-600 mt-1 text-center">試合目</p>
               </div>
             </div>
           </section>
@@ -267,18 +258,9 @@
       );
     }
 
-    function HistoryTab({ games, onDeleteGame, onUpdateGame }) {
+    function HistoryTab({ games, onDeleteGame }) {
       const [selectedDate, setSelectedDate] = useState(null);
       const [selectedGame, setSelectedGame] = useState(null);
-      const [editing, setEditing] = useState(false);
-
-      useEffect(() => {
-        if (selectedGame) {
-          const latest = games.find(g => g.id === selectedGame.id);
-          if (latest) setSelectedGame(latest);
-          else { setSelectedGame(null); setEditing(false); }
-        }
-      }, [games]);
 
       const byDate = {};
       games.forEach(g => {
@@ -287,23 +269,6 @@
         byDate[d].push(g);
       });
       const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-
-      if (games.length === 0) return (
-        <div className="text-center py-16 text-slate-600">
-          <p className="text-4xl mb-3">🀄</p>
-          <p className="text-sm">対局履歴がありません</p>
-        </div>
-      );
-
-      if (selectedGame && editing) {
-        return (
-          <EditGameView
-            game={selectedGame}
-            onSave={async (updated) => { await onUpdateGame(updated); setEditing(false); }}
-            onCancel={() => setEditing(false)}
-          />
-        );
-      }
 
       if (selectedGame) {
         const g = selectedGame;
@@ -319,16 +284,9 @@
               <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-white">{formatDate(d)} 第{g.gameNo}試合</p>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    {new Date(g.timestamp).toLocaleString("ja-JP", { hour: "2-digit", minute: "2-digit" })} 登録
-                  </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => setEditing(true)}
-                    className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">編集</button>
-                  <button onClick={async () => { if(confirm("この対局結果を削除しますか？")) { await onDeleteGame(g.id); setSelectedGame(null); } }}
-                    className="text-xs text-slate-600 hover:text-red-400 transition-colors">削除</button>
-                </div>
+                <button onClick={async () => { if(confirm("削除しますか？")) { await onDeleteGame(g.id); setSelectedGame(null); } }}
+                  className="text-xs text-slate-600 hover:text-red-400 transition-colors">削除</button>
               </div>
               <div className="divide-y divide-slate-800/60">
                 {[...g.results].sort((a, b) => a.rank - b.rank).map(r => (
@@ -356,25 +314,20 @@
               <span className="text-slate-600">›</span>
               <span className="text-slate-300">{formatDate(selectedDate)}</span>
             </nav>
-            <p className="text-xs text-slate-500">{dayGames.length}試合</p>
             <div className="space-y-2">
               {dayGames.map(g => {
                 const winner = g.results.find(r => r.rank === 1);
                 return (
                   <button key={g.id} onClick={() => setSelectedGame(g)}
-                    className="w-full bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 hover:border-slate-700 px-4 py-3 flex items-center gap-3 transition-colors text-left flex">
-                    <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-white">{g.gameNo}</span>
-                      <span className="text-xs text-slate-500 ml-0.5">戦</span>
+                    className="w-full bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 hover:border-slate-700 px-4 py-3 flex items-center justify-between transition-colors text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-sm font-bold text-white">{g.gameNo}</div>
+                      <div>
+                        <p className="text-sm text-white font-medium">第{g.gameNo}試合</p>
+                        <p className="text-xs text-slate-500 truncate">🥇 {winner?.name}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white font-medium">第{g.gameNo}試合</p>
-                      <p className="text-xs text-slate-500 mt-0.5 truncate">🥇 {winner?.name} {winner?.score?.toLocaleString()}点</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-slate-600">{new Date(g.timestamp).toLocaleString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</p>
-                      <p className="text-slate-600 text-xs mt-1">›</p>
-                    </div>
+                    <span className="text-slate-600">›</span>
                   </button>
                 );
               })}
@@ -385,27 +338,16 @@
 
       return (
         <div className="space-y-3">
-          <p className="text-xs text-slate-500">{dates.length}日分の記録</p>
           {dates.map(d => {
             const dayGames = byDate[d];
-            const playerMap = {};
-            dayGames.forEach(g => g.results.forEach(r => { playerMap[r.name] = (playerMap[r.name] || 0) + r.pts; }));
-            const top = Object.entries(playerMap).sort((a, b) => b[1] - a[1])[0];
             return (
               <button key={d} onClick={() => setSelectedDate(d)}
-                className="w-full bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 hover:border-slate-700 px-4 py-3.5 flex items-center gap-3 transition-colors text-left flex">
-                <div className="flex-1 min-w-0">
+                className="w-full bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 hover:border-slate-700 px-4 py-3.5 flex items-center justify-between transition-colors text-left">
+                <div>
                   <p className="text-sm font-semibold text-white">{formatDate(d)}</p>
-                  <p className="text-xs text-slate-500 mt-1">{dayGames.length}試合</p>
+                  <p className="text-xs text-slate-500 mt-1">{dayGames.length}試合の記録</p>
                 </div>
-                {top && (
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-xs text-slate-400">トップ</p>
-                    <p className="text-sm font-bold text-emerald-400">{top[0]}</p>
-                    <p className="text-xs text-emerald-600">{top[1] >= 0 ? `+${top[1]}` : top[1]}pt</p>
-                  </div>
-                )}
-                <span className="text-slate-600 text-sm ml-1">›</span>
+                <span className="text-slate-600">›</span>
               </button>
             );
           })}
@@ -413,161 +355,37 @@
       );
     }
 
-    function EditGameView({ game, onSave, onCancel }) {
-      const d = game.gameDate || toDateStr(game.timestamp);
-      const [gameDate, setGameDate] = useState(game.gameDate || toDateStr(game.timestamp));
-      const [gameNo, setGameNo] = useState(String(game.gameNo || ""));
-      const [scores, setScores] = useState(game.results.map(r => String(r.score)));
-      const [preview, setPreview] = useState(null);
-      const [error, setError] = useState("");
-      const [saving, setSaving] = useState(false);
-
-      const names = game.results.map(r => r.name);
-
-      useEffect(() => {
-        const nums = scores.map(s => parseInt(s, 10));
-        if (nums.some(isNaN)) { setPreview(null); setError(""); return; }
-        const total = nums.reduce((a, b) => a + b, 0);
-        if (total !== 100000) { setPreview(null); setError(`合計 ${total.toLocaleString()} 点（100,000点になるよう入力してください）`); return; }
-        setError("");
-        setPreview(calcGameResult(names.map((name, i) => ({ name, score: nums[i] }))));
-      }, [scores]);
-
-      const handleSave = async () => {
-        if (!preview) return;
-        const no = parseInt(gameNo, 10);
-        if (!gameDate || isNaN(no) || no < 1) { setError("対局日と試合番号を正しく入力してください"); return; }
-        setSaving(true);
-        await onSave({ ...game, gameDate, gameNo: no, results: preview });
-        setSaving(false);
-      };
-
-      return (
-        <div className="space-y-4">
-          <nav className="flex items-center gap-2 text-sm">
-            <button onClick={onCancel} className="text-emerald-400 hover:text-emerald-300">{formatDate(d)}</button>
-            <span className="text-slate-600">›</span>
-            <span className="text-slate-300">第{game.gameNo}試合</span>
-            <span className="text-slate-600">›</span>
-            <span className="text-amber-400">編集中</span>
-          </nav>
-
-          <section className="bg-slate-900 rounded-xl p-4 border border-amber-800/40">
-            <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-3">対局情報を編集</h2>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="text-xs text-slate-500 mb-1 block">対局日</label>
-                <input type="date" value={gameDate} onChange={e => setGameDate(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" />
-              </div>
-              <div className="w-24">
-                <label className="text-xs text-slate-500 mb-1 block">試合番号</label>
-                <input type="number" min="1" value={gameNo} onChange={e => setGameNo(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 text-center" />
-                <p className="text-xs text-slate-600 mt-1 text-center">試合目</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-slate-900 rounded-xl p-4 border border-amber-800/40">
-            <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-3">最終点数を修正</h2>
-            <div className="space-y-2">
-              {names.map((name, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <label className="w-16 text-sm text-slate-400 truncate">{name}</label>
-                  <input type="number" value={scores[i]}
-                    onChange={e => { const n = [...scores]; n[i] = e.target.value; setScores(n); }}
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500" />
-                </div>
-              ))}
-            </div>
-            {error && <p className="mt-3 text-xs text-red-400 bg-red-950/40 rounded-lg px-3 py-2">{error}</p>}
-          </section>
-
-          {preview && (
-            <section className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-800">
-                <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">修正後プレビュー</h2>
-              </div>
-              <div className="divide-y divide-slate-800">
-                {[...preview].sort((a, b) => a.rank - b.rank).map(r => (
-                  <div key={r.name} className="flex items-center gap-3 px-4 py-3">
-                    <RankBadge rank={r.rank} />
-                    <span className="flex-1 text-sm text-white">{r.name}</span>
-                    <span className="text-sm text-slate-400">{r.score.toLocaleString()}点</span>
-                    <span className={`text-sm font-bold w-14 text-right ${r.pts >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                      {r.pts >= 0 ? `+${r.pts}` : r.pts}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <div className="flex gap-3">
-            <button onClick={onCancel}
-              className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold rounded-lg py-2.5 transition-colors">
-              キャンセル
-            </button>
-            <button onClick={handleSave} disabled={!preview || saving}
-              className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white text-sm font-semibold rounded-lg py-2.5 transition-colors">
-              {saving ? "保存中…" : "変更を保存"}
-            </button>
-          </div>
-        </div>
-      );
-    }
-
     function StatsTab({ games, players }) {
-      if (games.length === 0) return (
-        <div className="text-center py-16 text-slate-600">
-          <p className="text-4xl mb-3">📊</p>
-          <p className="text-sm">まだ対局データがありません</p>
-        </div>
-      );
-
       const stats = players.map(name => {
         const participated = games.filter(g => g.results.some(r => r.name === name));
         const count = participated.length;
-        if (count === 0) return { name, count: 0, avgRank: "-", top1Rate: "-", avgPts: "-", totalPts: 0 };
+        if (count === 0) return { name, count: 0, avgRank: "-", top1Rate: "-", totalPts: 0 };
         const results = participated.map(g => g.results.find(r => r.name === name));
         const totalPts = results.reduce((a, r) => a + r.pts, 0);
         return {
           name, count,
           avgRank: (results.reduce((a, r) => a + r.rank, 0) / count).toFixed(1),
           top1Rate: ((results.filter(r => r.rank === 1).length / count) * 100).toFixed(0),
-          avgPts: (totalPts / count).toFixed(1),
           totalPts,
         };
       });
 
-      const rankingData = [...stats].sort((a, b) => b.totalPts - a.totalPts).map((s, i) => ({ ...s, rankNum: i + 1 }));
-      const reversedGames = [...games].reverse();
-      const lineData = reversedGames.map((game, gi) => {
-        const pt = { game: `${gi + 1}` };
-        players.forEach(name => {
-          let cum = 0;
-          for (let j = 0; j <= gi; j++) {
-            const r = reversedGames[j].results.find(r => r.name === name);
-            if (r) cum += r.pts;
-          }
-          pt[name] = cum;
-        });
-        return pt;
-      });
+      const rankingData = [...stats].sort((a, b) => b.totalPts - a.totalPts);
 
       return (
         <div className="space-y-6">
           <section>
             <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">累計ランキング</h2>
             <div className="space-y-2">
-              {rankingData.map(s => (
-                <div key={s.name} className="bg-slate-900 rounded-xl border border-slate-800 px-4 py-3 flex items-center gap-3">
-                  <RankBadge rank={s.rankNum} />
-                  <span className="flex-1 text-sm text-white font-medium">{s.name}</span>
+              {rankingData.map((s, i) => (
+                <div key={s.name} className="bg-slate-900 rounded-xl border border-slate-800 px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400">{i + 1}</span>
+                    <span className="text-sm font-medium text-white">{s.name}</span>
+                  </div>
                   <div className="text-right">
-                    <p className={`text-lg font-bold ${s.totalPts >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                      {s.totalPts >= 0 ? `+${s.totalPts}` : s.totalPts}
+                    <p className={`text-base font-bold ${s.totalPts >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      {s.totalPts >= 0 ? `+${s.totalPts}` : s.totalPts}pt
                     </p>
                     <p className="text-xs text-slate-600">{s.count}局</p>
                   </div>
@@ -577,60 +395,15 @@
           </section>
 
           <section>
-            <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">累計ポイント比較</h2>
-            <div className="bg-slate-900 rounded-xl border border-slate-800 p-3">
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={rankingData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                  <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                  <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 8 }}
-                    labelStyle={{ color: "#e2e8f0" }} itemStyle={{ color: "#94a3b8" }} />
-                  <ReferenceLine y={0} stroke="#475569" />
-                  <Bar dataKey="totalPts" name="累計PT" fill="#34d399" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
-
-          {reversedGames.length >= 2 && (
-            <section>
-              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">累計ポイント推移</h2>
-              <div className="bg-slate-900 rounded-xl border border-slate-800 p-3">
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={lineData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="game" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                    <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                    <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 8 }}
-                      labelStyle={{ color: "#e2e8f0" }} itemStyle={{ color: "#94a3b8" }} />
-                    <ReferenceLine y={0} stroke="#475569" />
-                    <Legend wrapperStyle={{ fontSize: 12, color: "#94a3b8" }} />
-                    {players.map((name, i) => (
-                      <Line key={name} type="monotone" dataKey={name} stroke={COLORS[i % COLORS.length]}
-                        strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-          )}
-
-          <section>
             <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">個人詳細</h2>
             <div className="grid grid-cols-2 gap-3">
-              {stats.map((s, i) => (
+              {stats.map(s => (
                 <div key={s.name} className="bg-slate-900 rounded-xl border border-slate-800 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-                    <span className="text-sm font-semibold text-white">{s.name}</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    <StatRow label="対局数" value={`${s.count}局`} />
-                    <StatRow label="平均順位" value={s.count ? `${s.avgRank}位` : "–"} />
-                    <StatRow label="1位率" value={s.count ? `${s.top1Rate}%` : "–"} />
-                    <StatRow label="平均PT" value={s.count ? s.avgPts : "–"}
-                      color={s.count && parseFloat(s.avgPts) >= 0 ? "text-emerald-400" : "text-red-400"} />
+                  <p className="text-sm font-semibold text-white mb-2 pb-1 border-b border-slate-800">{s.name}</p>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs"><span className="text-slate-500">対局数</span><span className="text-slate-200">{s.count}局</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-slate-500">平均順位</span><span className="text-slate-200">{s.avgRank}位</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-slate-500">1位率</span><span className="text-slate-200">{s.top1Rate}%</span></div>
                   </div>
                 </div>
               ))}
@@ -640,19 +413,9 @@
       );
     }
 
-    function RankBadge({ rank, small }) {
+    function RankBadge({ rank }) {
       const colors = { 1: "bg-amber-400 text-amber-900", 2: "bg-slate-400 text-slate-900", 3: "bg-amber-700 text-amber-100", 4: "bg-slate-700 text-slate-400" };
-      const size = small ? "w-5 h-5 text-xs" : "w-6 h-6 text-xs";
-      return <span className={`${size} rounded-full font-bold flex items-center justify-center flex-shrink-0 ${colors[rank] || "bg-slate-700 text-slate-400"}`}>{rank}</span>;
-    }
-
-    function StatRow({ label, value, color }) {
-      return (
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">{label}</span>
-          <span className={`text-xs font-semibold ${color || "text-slate-200"}`}>{value}</span>
-        </div>
-      );
+      return <span className={`w-6 h-6 rounded-full font-bold flex items-center justify-center flex-shrink-0 ${colors[rank]}`}>{rank}</span>;
     }
 
     const container = document.getElementById('root');
