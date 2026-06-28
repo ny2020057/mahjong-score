@@ -6,11 +6,6 @@
   <title>🀄 麻雀スコア管理</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script>
-    const myUrl = 'https://oidnfkbxmkvqrdtqwcgc.supabase.co';
-    const myKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pZG5ma2J4bWt2cXJkdHF3Y2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjgzODgsImV4cCI6MjA5ODE0NDM4OH0.RYGMUUVh5gT9k2G5Vbmb0mo6yasp9GjO4-wjvTa7xYA';
-    window.db = supabase.createClient(myUrl, myKey);
-  </script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
 
@@ -96,6 +91,7 @@
     let currentTab = 0;
     let players = ["東家", "南家", "西家", "北家"];
     let games = [];
+    let db = null; // ここで初期化
 
     // 計算用定数
     const RETURN_POINTS = 30000;
@@ -120,23 +116,29 @@
 
     // 初期化
     window.onload = async function() {
+      // ⚠️ システム起動と同時に確実に認証キーを持たせて初期化
+      const myUrl = 'https://oidnfkbxmkvqrdtqwcgc.supabase.co';
+      const myKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pZG5ma2J4bWt2cXJkdHF3Y2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjgzODgsImV4cCI6MjA5ODE0NDM4OH0.RYGMUUVh5gT9k2G5Vbmb0mo6yasp9GjO4-wjvTa7xYA';
+      db = supabase.createClient(myUrl, myKey);
+
       document.getElementById('input-game-date').value = todayStr();
       await reloadData();
       
       // リアルタイム同期設定
-      window.db.channel('public-changes')
+      db.channel('public-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, reloadData)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state' }, reloadData)
         .subscribe();
     };
 
     async function reloadData() {
+      if (!db) return;
       showSync(true);
       try {
-        const { data: stateData } = await window.db.from("app_state").select("*").eq("key", "players").maybeSingle();
+        const { data: stateData } = await db.from("app_state").select("*").eq("key", "players").maybeSingle();
         if (stateData) players = stateData.value;
 
-        const { data: gamesData } = await window.db.from("games").select("*").order("game_date", { ascending: false }).order("game_no", { ascending: false });
+        const { data: gamesData } = await db.from("games").select("*").order("game_date", { ascending: false }).order("game_no", { ascending: false });
         if (gamesData) {
           games = gamesData.map(g => ({
             id: g.id,
@@ -225,10 +227,11 @@
     }
 
     async function savePlayerNames() {
+      if (!db) return;
       showSync(true);
       const newNames = [0, 1, 2, 3].map(i => document.getElementById(`edit-player-${i}`).value.trim() || players[i]);
       players = newNames;
-      await window.db.from("app_state").upsert({ key: "players", value: newNames });
+      await db.from("app_state").upsert({ key: "players", value: newNames });
       isEditingPlayers = false;
       toggleEditPlayers(false);
       await reloadData();
@@ -288,12 +291,12 @@
     }
 
     async function submitGame() {
-      if (!currentPreviewResults) return;
+      if (!db || !currentPreviewResults) return;
       const dateVal = document.getElementById('input-game-date').value;
       const noVal = parseInt(document.getElementById('input-game-no').value, 10);
       
       showSync(true);
-      await window.db.from("games").insert([{ game_date: dateVal, game_no: noVal, results: currentPreviewResults }]);
+      await db.from("games").insert([{ game_date: dateVal, game_no: noVal, results: currentPreviewResults }]);
       
       [0, 1, 2, 3].forEach(i => document.getElementById(`score-input-${i}`).value = '');
       document.getElementById('preview-section').classList.add('hidden');
@@ -397,9 +400,9 @@
     }
 
     async function deleteGame(id) {
-      if(!confirm("削除しますか？")) return;
+      if(!db || !confirm("削除しますか？")) return;
       showSync(true);
-      await window.db.from("games").delete().eq("id", id);
+      await db.from("games").delete().eq("id", id);
       historyViewGameId = null;
       await reloadData();
     }
